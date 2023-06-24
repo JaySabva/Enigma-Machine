@@ -1,4 +1,4 @@
-# Enigma_Machine
+# Enigma Machine
 
 The Enigma Machine is a cryptographic device used during World War II for secure communication. It was developed in the early 20th century and widely adopted by the German military for encoding and decoding confidential messages. The Enigma Machine played a significant role in the war, and its encryption methods were considered unbreakable at the time.
 
