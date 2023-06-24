@@ -1,0 +1,291 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <unordered_set>
+#include<bits/stdc++.h>
+using namespace std;
+class Rotor {
+    std::string name;
+    std::vector<int> forwardWiring;
+    std::vector<int> backwardWiring;
+
+    int rotorPosition;
+    int notchPosition;
+    int ringSetting;
+
+public:
+    Rotor(const std::string& name, const std::string& encoding, int rotorPosition, int notchPosition, int ringSetting)
+        : name(name), forwardWiring(decodeWiring(encoding)), backwardWiring(inverseWiring(forwardWiring)),
+          rotorPosition(rotorPosition), notchPosition(notchPosition), ringSetting(ringSetting) {}
+
+    static Rotor Create(const std::string& name, int rotorPosition, int ringSetting) {
+        if (name == "I")
+            return Rotor("I", "EKMFLGDQVZNTOWYHXUSPAIBRCJ", rotorPosition, 16, ringSetting);
+        else if (name == "II")
+            return Rotor("II", "AJDKSIRUXBLHWTMCQGZNPYFVOE", rotorPosition, 4, ringSetting);
+        else if (name == "III")
+            return Rotor("III", "BDFHJLCPRTXVZNYEIWGAKMUSQO", rotorPosition, 21, ringSetting);
+        else if (name == "IV")
+            return Rotor("IV", "ESOVPZJAYQUIRHXLNFTGKDCMWB", rotorPosition, 9, ringSetting);
+        else if (name == "V")
+            return Rotor("V", "VZBRGITYUPSDNHLXAWMJQOFECK", rotorPosition, 25, ringSetting);
+        else if (name == "VI")
+            return Rotor("VI", "JPGVOUMFYQBENHZRDKASXLICTW", rotorPosition, 0, ringSetting);
+        else if (name == "VII")
+            return Rotor("VII", "NZJHGRCXMYSWBOUFAIVLPEKQDT", rotorPosition, 0, ringSetting);
+        else if (name == "VIII")
+            return Rotor("VIII", "FKQHTLXOCBJSPDZRAMEWNIUYGV", rotorPosition, 0, ringSetting);
+        else
+            return Rotor("Identity", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", rotorPosition, 0, ringSetting);
+    }
+
+    std::string getName() const {
+        return name;
+    }
+
+    int getPosition() const {
+        return rotorPosition;
+    }
+
+    int forward(int c) const {
+        return encipher(c, rotorPosition, ringSetting, forwardWiring);
+    }
+
+    int backward(int c) const {
+        return encipher(c, rotorPosition, ringSetting, backwardWiring);
+    }
+
+    bool isAtNotch() const {
+        return notchPosition == rotorPosition;
+    }
+
+    void turnover() {
+        rotorPosition = (rotorPosition + 1) % 26;
+    }
+
+private:
+    static std::vector<int> decodeWiring(const std::string& encoding) {
+        std::vector<int> wiring(encoding.size());
+        std::transform(encoding.begin(), encoding.end(), wiring.begin(),
+            [](char c) { return c - 'A'; });
+        return wiring;
+    }
+
+    static std::vector<int> inverseWiring(const std::vector<int>& wiring) {
+        std::vector<int> inverse(wiring.size());
+        for (int i = 0; i < wiring.size(); i++) {
+            inverse[wiring[i]] = i;
+        }
+        return inverse;
+    }
+
+    static int encipher(int c, int rotorPos, int ringPos, const std::vector<int>& wiring) {
+        int offset = c + rotorPos - ringPos;
+        int normalized = (offset + 26) % 26;
+        int enciphered = wiring[normalized];
+        int unoffset = (enciphered - rotorPos + ringPos + 26) % 26;
+        return unoffset;
+    }
+};
+
+class Reflector {
+    std::vector<int> forwardWiring;
+
+public:
+    Reflector(const std::string& encoding)
+        : forwardWiring(decodeWiring(encoding)) {}
+
+    static Reflector Create(const std::string& name) {
+        if (name == "B")
+            return Reflector("YRUHQSLDPXNGOKMIEBFZCWVJAT");
+        else if (name == "C")
+            return Reflector("FVPJIAOYEDRZXWGCTKUQSBNMHL");
+        else
+            return Reflector("ZYXWVUTSRQPONMLKJIHGFEDCBA");
+    }
+
+    int forward(int c) const {
+        return forwardWiring[c];
+    }
+
+private:
+    static std::vector<int> decodeWiring(const std::string& encoding) {
+        std::vector<int> wiring(encoding.size());
+        std::transform(encoding.begin(), encoding.end(), wiring.begin(),
+            [](char c) { return c - 'A'; });
+        return wiring;
+    }
+};
+
+class Plugboard {
+    std::vector<int> wiring;
+
+public:
+    Plugboard(const std::string& connections)
+        : wiring(decodePlugboard(connections)) {}
+
+    int forward(int c) const {
+        return wiring[c];
+    }
+
+    static std::unordered_set<int> getUnpluggedCharacters(const std::string& plugboard) {
+        std::unordered_set<int> unpluggedCharacters;
+        for (int i = 0; i < 26; i++) {
+            unpluggedCharacters.insert(i);
+        }
+
+        if (plugboard.empty()) {
+            return unpluggedCharacters;
+        }
+
+        std::string temp = plugboard;
+        temp.erase(std::remove_if(temp.begin(), temp.end(), [](char c) {
+            return !isalpha(c);
+        }), temp.end());
+
+        for (size_t i = 0; i < temp.size(); i += 2) {
+            int c1 = temp[i] - 'A';
+            int c2 = temp[i + 1] - 'A';
+            unpluggedCharacters.erase(c1);
+            unpluggedCharacters.erase(c2);
+        }
+
+        return unpluggedCharacters;
+    }
+
+private:
+    static std::vector<int> decodePlugboard(const std::string& plugboard) {
+        if (plugboard.empty()) {
+            return identityPlugboard();
+        }
+
+        std::string temp = plugboard;
+        temp.erase(std::remove_if(temp.begin(), temp.end(), [](char c) {
+            return !isalpha(c);
+        }), temp.end());
+
+        std::unordered_set<int> pluggedCharacters;
+        std::vector<int> mapping(26);
+        std::iota(mapping.begin(), mapping.end(), 0);
+
+        for (size_t i = 0; i < temp.size(); i += 2) {
+            if (temp[i] == temp[i + 1]) {
+                return identityPlugboard();
+            }
+
+            int c1 = temp[i] - 'A';
+            int c2 = temp[i + 1] - 'A';
+
+            if (pluggedCharacters.count(c1) || pluggedCharacters.count(c2)) {
+                return identityPlugboard();
+            }
+
+            pluggedCharacters.insert(c1);
+            pluggedCharacters.insert(c2);
+
+            mapping[c1] = c2;
+            mapping[c2] = c1;
+        }
+
+        return mapping;
+    }
+
+    static std::vector<int> identityPlugboard() {
+        std::vector<int> mapping(26);
+        std::iota(mapping.begin(), mapping.end(), 0);
+        return mapping;
+    }
+};
+
+class Enigma {
+    Rotor leftRotor;
+    Rotor middleRotor;
+    Rotor rightRotor;
+
+    Reflector reflector;
+
+    Plugboard plugboard;
+
+public:
+    Enigma(const std::string& leftRotorType, const std::string& middleRotorType, const std::string& rightRotorType,
+           const std::string& reflectorType, int leftRotorPosition, int middleRotorPosition, int rightRotorPosition,
+           int leftRingSetting, int middleRingSetting, int rightRingSetting, const std::string& plugboardConnections)
+        : leftRotor(Rotor::Create(leftRotorType, leftRotorPosition, leftRingSetting)),
+          middleRotor(Rotor::Create(middleRotorType, middleRotorPosition, middleRingSetting)),
+          rightRotor(Rotor::Create(rightRotorType, rightRotorPosition, rightRingSetting)),
+          reflector(Reflector::Create(reflectorType)),
+          plugboard(Plugboard(plugboardConnections)) {}
+
+    int encrypt(int c) {
+        rotate();
+
+        c = plugboard.forward(c);
+
+        int c1 = rightRotor.forward(c);
+        int c2 = middleRotor.forward(c1);
+        int c3 = leftRotor.forward(c2);
+
+        int c4 = reflector.forward(c3);
+
+        int c5 = leftRotor.backward(c4);
+        int c6 = middleRotor.backward(c5);
+        int c7 = rightRotor.backward(c6);
+
+        c7 = plugboard.forward(c7);
+
+        return c7;
+    }
+
+std::string encrypt(const std::string& input) {
+    std::string output = input;
+    std::transform(output.begin(), output.end(), output.begin(),
+        [this](char c) -> char {
+            if (std::isalpha(c))
+                return 'A' + encrypt(std::toupper(c) - 'A');
+            else
+                return c;
+        });
+    return output;
+}
+
+
+private:
+    void rotate() {
+        if (middleRotor.isAtNotch()) {
+            middleRotor.turnover();
+            leftRotor.turnover();
+        }
+        else if (rightRotor.isAtNotch()) {
+            middleRotor.turnover();
+        }
+
+        rightRotor.turnover();
+    }
+};
+
+int main() {
+    std::string leftRotorType = "III";
+    std::string middleRotorType = "II";
+    std::string rightRotorType = "I";
+    std::string reflectorType = "B";
+    int leftRotorPosition = 0;
+    int middleRotorPosition = 0;
+    int rightRotorPosition = 0;
+    int leftRingSetting = 0;
+    int middleRingSetting = 0;
+    int rightRingSetting = 0;
+    std::string plugboardConnections = "AQ BJ CM DX EZ FL GY HW IP KU";
+
+    Enigma enigma(leftRotorType, middleRotorType, rightRotorType,
+                  reflectorType, leftRotorPosition, middleRotorPosition, rightRotorPosition,
+                  leftRingSetting, middleRingSetting, rightRingSetting, plugboardConnections);
+
+    std::string plaintext = "JaySabva";
+    std::string ciphertext = enigma.encrypt(plaintext);
+
+    std::cout << "Plaintext: " << plaintext << std::endl;
+    std::cout << "Ciphertext: " << ciphertext << std::endl;
+
+    return 0;
+}
